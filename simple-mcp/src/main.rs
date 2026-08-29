@@ -7,6 +7,7 @@ use rmcp::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
+use rmcp::model::{CallToolResult, ContentBlock};
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
@@ -25,11 +26,18 @@ impl WeatherServer {
         Self { tool_router: Self::tool_router() }
     }
 
-    #[tool(description = "Current forecast for a city")]
-    async fn get_forecast(&self, Parameters(args): Parameters<ForecastArgs>) -> String {
-        // Call a real weather API here; a canned string keeps the example runnable.
-        format!("Forecast for {}: 18C, clear", args.city)
+
+
+#[tool(description = "Fetch the forecast, or report why it failed")]
+async fn get_forecast(&self, Parameters(args): Parameters<ForecastArgs>) -> CallToolResult {
+    match fetch_upstream(&args.city).await {
+        Ok(text) => CallToolResult::success(vec![ContentBlock::text(text)]),
+        Err(e) => CallToolResult::error(vec![ContentBlock::text(
+            format!("weather lookup failed: {e}"),
+        )]),
     }
+}
+
 }
 
 #[tool_handler]
