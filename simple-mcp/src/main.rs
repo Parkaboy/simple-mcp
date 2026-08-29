@@ -8,6 +8,7 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 use rmcp::model::{CallToolResult, ContentBlock};
+    use rmcp::ErrorData as McpError;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
@@ -30,6 +31,12 @@ impl WeatherServer {
 
 #[tool(description = "Fetch the forecast, or report why it failed")]
 async fn get_forecast(&self, Parameters(args): Parameters<ForecastArgs>) -> CallToolResult {
+    
+
+    if args.city.is_empty() {
+        return Err(McpError::invalid_params("city must not be empty", None));
+    }
+    
     match fetch_upstream(&args.city).await {
         Ok(text) => CallToolResult::success(vec![ContentBlock::text(text)]),
         Err(e) => CallToolResult::error(vec![ContentBlock::text(
