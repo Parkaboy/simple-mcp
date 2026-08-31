@@ -30,6 +30,7 @@ struct CurrentWeather {
     weather_code: i32,
 }
 
+/// Looks up a city and fetches its current conditions from Open-Meteo.
 pub(crate) async fn fetch_upstream(city: &str) -> anyhow::Result<Forecast> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
@@ -73,6 +74,7 @@ pub(crate) async fn fetch_upstream(city: &str) -> anyhow::Result<Forecast> {
     })
 }
 
+/// Converts an Open-Meteo WMO weather code into readable text.
 fn weather_summary(code: i32) -> &'static str {
     match code {
         0 => "clear sky",
@@ -84,5 +86,19 @@ fn weather_summary(code: i32) -> &'static str {
         85 | 86 => "snow showers",
         95 | 96 | 99 => "thunderstorms",
         _ => "unknown conditions",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::weather_summary;
+
+    /// Maps representative Open-Meteo codes to readable summaries.
+    #[test]
+    fn maps_weather_codes() {
+        assert_eq!(weather_summary(0), "clear sky");
+        assert_eq!(weather_summary(61), "rainy");
+        assert_eq!(weather_summary(95), "thunderstorms");
+        assert_eq!(weather_summary(999), "unknown conditions");
     }
 }
