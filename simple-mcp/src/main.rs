@@ -7,13 +7,20 @@ use rmcp::{
     transport::stdio,
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use rmcp::ErrorData as McpError;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
     /// The city to get the forecast for.
     city: String,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+struct Forecast {
+    city: String,
+    temp_c: f64,
+    summary: String,
 }
 
 #[derive(Clone)]
@@ -37,7 +44,12 @@ impl WeatherServer {
         }
 
         match fetch_upstream(city).await {
-            Ok(forecast) => CallToolResult::success(vec![ContentBlock::text(forecast)]),
+            Ok(forecast) => match serde_json::to_value(forecast) {
+                Ok(data) => CallToolResult::structured(data),
+                Err(error) => CallToolResult::error(vec![ContentBlock::text(format!(
+                    "could not serialize forecast: {error}"
+                ))]),
+            },
             Err(error) => CallToolResult::error(vec![ContentBlock::text(format!(
                 "weather lookup failed: {error}"
             ))]),
@@ -55,7 +67,11 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn fetch_upstream(city: &str) -> Result<String, McpError> {
+async fn fetch_upstream(city: &str) -> Result<Forecast, McpError> {
     // A canned response keeps this test server independent of external services.
-    Ok(format!("Forecast for {city}: 18C, clear"))
+    Ok(Forecast {
+        city: city.to_string(),
+        temp_c: 18.0,
+        summary: "clear".to_string(),
+    })
 }
