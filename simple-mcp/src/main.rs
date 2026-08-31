@@ -1,5 +1,6 @@
 // src/main.rs
-use rmcp::ErrorData as McpError;
+mod weather;
+
 use rmcp::{
     ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -8,19 +9,14 @@ use rmcp::{
     transport::stdio,
 };
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+
+use weather::fetch_upstream;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
     /// The city to get the forecast for.
     city: String,
-}
-
-#[derive(Debug, Serialize, JsonSchema)]
-struct Forecast {
-    city: String,
-    temp_c: f64,
-    summary: String,
 }
 
 #[derive(Clone)]
@@ -67,13 +63,4 @@ async fn main() -> anyhow::Result<()> {
     let service = WeatherServer::new().serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
-}
-
-async fn fetch_upstream(city: &str) -> Result<Forecast, McpError> {
-    // A canned response keeps this test server independent of external services.
-    Ok(Forecast {
-        city: city.to_string(),
-        temp_c: 18.0,
-        summary: "clear".to_string(),
-    })
 }
