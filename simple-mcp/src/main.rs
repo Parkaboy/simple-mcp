@@ -1,14 +1,14 @@
 // src/main.rs
+use rmcp::ErrorData as McpError;
 use rmcp::{
+    ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{CallToolResult, ContentBlock},
     tool, tool_handler, tool_router,
-    ServerHandler, ServiceExt,
     transport::stdio,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use rmcp::ErrorData as McpError;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
@@ -31,7 +31,9 @@ struct WeatherServer {
 #[tool_router]
 impl WeatherServer {
     fn new() -> Self {
-        Self { tool_router: Self::tool_router() }
+        Self {
+            tool_router: Self::tool_router(),
+        }
     }
 
     #[tool(description = "Current forecast for a city")]
