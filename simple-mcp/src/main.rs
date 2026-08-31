@@ -1,14 +1,14 @@
 // src/main.rs
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
+    model::{CallToolResult, ContentBlock},
     tool, tool_handler, tool_router,
     ServerHandler, ServiceExt,
     transport::stdio,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
-use rmcp::model::{CallToolResult, ContentBlock};
-    use rmcp::ErrorData as McpError;
+use rmcp::ErrorData as McpError;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ForecastArgs {
@@ -27,24 +27,22 @@ impl WeatherServer {
         Self { tool_router: Self::tool_router() }
     }
 
+    #[tool(description = "Current forecast for a city")]
+    async fn get_forecast(&self, Parameters(args): Parameters<ForecastArgs>) -> CallToolResult {
+        let city = args.city.trim();
+        if city.is_empty() {
+            return CallToolResult::error(vec![ContentBlock::text(
+                "city must not be empty".to_string(),
+            )]);
+        }
 
-
-#[tool(description = "Fetch the forecast, or report why it failed")]
-async fn get_forecast(&self, Parameters(args): Parameters<ForecastArgs>) -> CallToolResult {
-    
-
-    if args.city.is_empty() {
-        return Err(McpError::invalid_params("city must not be empty", None));
+        match fetch_upstream(city).await {
+            Ok(forecast) => CallToolResult::success(vec![ContentBlock::text(forecast)]),
+            Err(error) => CallToolResult::error(vec![ContentBlock::text(format!(
+                "weather lookup failed: {error}"
+            ))]),
+        }
     }
-    
-    match fetch_upstream(&args.city).await {
-        Ok(text) => CallToolResult::success(vec![ContentBlock::text(text)]),
-        Err(e) => CallToolResult::error(vec![ContentBlock::text(
-            format!("weather lookup failed: {e}"),
-        )]),
-    }
-}
-
 }
 
 #[tool_handler]
@@ -55,4 +53,9 @@ async fn main() -> anyhow::Result<()> {
     let service = WeatherServer::new().serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
+}
+
+async fn fetch_upstream(city: &str) -> Result<String, McpError> {
+    // A canned response keeps this test server independent of external services.
+    Ok(format!("Forecast for {city}: 18C, clear"))
 }
